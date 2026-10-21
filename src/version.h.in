@@ -1,0 +1,10 @@
+#ifndef NP_VERSION_H
+#define NP_VERSION_H
+
+namespace np {
+inline constexpr char kVersion[] = "@NP_VERSION@";
+inline constexpr char kGitCommit[] = "@NP_GIT_COMMIT@";
+inline constexpr char kBuildRevision[] = "@NP_BUILD_REVISION@";
+}  // namespace np
+
+#endif  // NP_VERSION_H

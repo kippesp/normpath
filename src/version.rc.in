@@ -1,0 +1,32 @@
+// Generated from version.rc.in by WriteProjectIdentity.cmake; do not edit.
+// The manifest is embedded separately; this file carries only VERSIONINFO.
+// Constants are spelled out so no SDK header is needed by rc.exe or llvm-rc.
+
+1 VERSIONINFO
+ FILEVERSION @NP_VERSION_MAJOR@,@NP_VERSION_MINOR@,@NP_VERSION_PATCH@,0
+ PRODUCTVERSION @NP_VERSION_MAJOR@,@NP_VERSION_MINOR@,@NP_VERSION_PATCH@,0
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName", "Paul Kippes"
+      VALUE "FileDescription", "Path Normalizer for Windows"
+      VALUE "FileVersion", "@NP_VERSION@ (git @NP_GIT_COMMIT@)"
+      VALUE "InternalName", "np"
+      VALUE "LegalCopyright", "Copyright (c) 2026 Paul Kippes. MIT License."
+      VALUE "OriginalFilename", "np.exe"
+      VALUE "ProductName", "np - Path Normalizer for Windows"
+      VALUE "ProductVersion", "@NP_VERSION@"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

@@ -1,0 +1,590 @@
+{
+  "version": 10,
+  "cmakeMinimumRequired": {
+    "major": 4,
+    "minor": 2,
+    "patch": 5
+  },
+  "configurePresets": [
+    {
+      "name": "clang-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_COMPILER_TARGET": "x86_64-pc-windows-msvc",
+        "CMAKE_LINKER_TYPE": "LLD"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "clang-debug",
+      "displayName": "Clang Debug: Ninja, clang++ from PATH, lld-link, static debug CRT",
+      "inherits": "clang-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "clang-release",
+      "displayName": "Clang Release: Ninja, clang++ from PATH, lld-link, static CRT",
+      "inherits": "clang-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "clang-tidy",
+      "displayName": "Clang Debug with clang-tidy on owned targets",
+      "inherits": "clang-debug",
+      "cacheVariables": {
+        "NP_ENABLE_TIDY": "ON"
+      }
+    },
+    {
+      "name": "clang-coverage",
+      "displayName": "Clang Debug with native LLVM coverage (llvm-profdata, llvm-cov)",
+      "inherits": "clang-debug",
+      "cacheVariables": {
+        "NP_ENABLE_COVERAGE": "ON"
+      }
+    },
+    {
+      "name": "clang-asan",
+      "displayName": "Clang Debug AddressSanitizer (runtime probe must pass)",
+      "description": "ASan configure stops when the runtime probe fails (observed 0xC0000139 with LLVM 23).",
+      "inherits": "clang-debug",
+      "cacheVariables": {
+        "NP_ENABLE_ASAN": "ON"
+      }
+    },
+    {
+      "name": "clang-ubsan",
+      "displayName": "Clang Release UndefinedBehaviorSanitizer (Debug cannot link the runtime)",
+      "description": "Release only: the installed ubsan_standalone_cxx library is built against the static release CRT, and the Debug link fails.",
+      "inherits": "clang-release",
+      "cacheVariables": {
+        "NP_ENABLE_UBSAN": "ON"
+      }
+    },
+    {
+      "name": "msvc-base",
+      "hidden": true,
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "vs2022",
+      "displayName": "Visual Studio 2022 v143 multi-config (MSVC cl.exe, link.exe, static CRT)",
+      "generator": "Visual Studio 17 2022",
+      "toolset": "v143",
+      "inherits": "msvc-base"
+    },
+    {
+      "name": "vs2022-asan",
+      "displayName": "Visual Studio 2022 v143 AddressSanitizer, Debug configuration",
+      "inherits": "vs2022",
+      "cacheVariables": {
+        "NP_ENABLE_ASAN": "ON"
+      }
+    },
+    {
+      "name": "vs2026",
+      "displayName": "Visual Studio 2026 v145 multi-config (MSVC cl.exe, link.exe, static CRT)",
+      "generator": "Visual Studio 18 2026",
+      "toolset": "v145",
+      "inherits": "msvc-base"
+    },
+    {
+      "name": "vs2026-asan",
+      "displayName": "Visual Studio 2026 v145 AddressSanitizer, Debug configuration",
+      "inherits": "vs2026",
+      "cacheVariables": {
+        "NP_ENABLE_ASAN": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "build-base",
+      "hidden": true,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "clang-debug",
+      "displayName": "Build Clang Debug: Ninja, clang++ from PATH, lld-link, static debug CRT",
+      "inherits": "build-base",
+      "configurePreset": "clang-debug"
+    },
+    {
+      "name": "clang-release",
+      "displayName": "Build Clang Release: Ninja, clang++ from PATH, lld-link, static CRT",
+      "inherits": "build-base",
+      "configurePreset": "clang-release"
+    },
+    {
+      "name": "clang-tidy",
+      "displayName": "Build Clang Debug with clang-tidy on owned targets",
+      "inherits": "build-base",
+      "configurePreset": "clang-tidy"
+    },
+    {
+      "name": "clang-asan",
+      "displayName": "Build Clang Debug AddressSanitizer (runtime probe must pass)",
+      "inherits": "build-base",
+      "configurePreset": "clang-asan"
+    },
+    {
+      "name": "clang-ubsan",
+      "displayName": "Build Clang Release UndefinedBehaviorSanitizer (Debug cannot link the runtime)",
+      "inherits": "build-base",
+      "configurePreset": "clang-ubsan"
+    },
+    {
+      "name": "vs2022-debug",
+      "displayName": "Build Visual Studio 2022 v143, Debug configuration",
+      "inherits": "build-base",
+      "configurePreset": "vs2022",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2022-release",
+      "displayName": "Build Visual Studio 2022 v143, Release configuration",
+      "inherits": "build-base",
+      "configurePreset": "vs2022",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2022-asan",
+      "displayName": "Build Visual Studio 2022 v143 AddressSanitizer, Debug configuration",
+      "inherits": "build-base",
+      "configurePreset": "vs2022-asan",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2026-debug",
+      "displayName": "Build Visual Studio 2026 v145, Debug configuration",
+      "inherits": "build-base",
+      "configurePreset": "vs2026",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2026-release",
+      "displayName": "Build Visual Studio 2026 v145, Release configuration",
+      "inherits": "build-base",
+      "configurePreset": "vs2026",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2026-asan",
+      "displayName": "Build Visual Studio 2026 v145 AddressSanitizer, Debug configuration",
+      "inherits": "build-base",
+      "configurePreset": "vs2026-asan",
+      "configuration": "Debug"
+    },
+    {
+      "name": "clang-coverage",
+      "displayName": "Build Clang Debug with native LLVM coverage (llvm-profdata, llvm-cov)",
+      "inherits": "build-base",
+      "configurePreset": "clang-coverage",
+      "targets": [
+        "coverage"
+      ]
+    },
+    {
+      "name": "format-check",
+      "displayName": "Build clang-format check for owned sources",
+      "inherits": "build-base",
+      "configurePreset": "clang-debug",
+      "targets": [
+        "format-check"
+      ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "test-base",
+      "hidden": true,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "clang-debug",
+      "displayName": "Test Clang Debug: Ninja, clang++ from PATH, lld-link, static debug CRT",
+      "inherits": "test-base",
+      "configurePreset": "clang-debug"
+    },
+    {
+      "name": "clang-release",
+      "displayName": "Test Clang Release: Ninja, clang++ from PATH, lld-link, static CRT",
+      "inherits": "test-base",
+      "configurePreset": "clang-release"
+    },
+    {
+      "name": "clang-tidy",
+      "displayName": "Test Clang Debug with clang-tidy on owned targets",
+      "inherits": "test-base",
+      "configurePreset": "clang-tidy"
+    },
+    {
+      "name": "clang-asan",
+      "displayName": "Test Clang Debug AddressSanitizer (runtime probe must pass)",
+      "inherits": "test-base",
+      "configurePreset": "clang-asan"
+    },
+    {
+      "name": "clang-ubsan",
+      "displayName": "Test Clang Release UndefinedBehaviorSanitizer (Debug cannot link the runtime)",
+      "inherits": "test-base",
+      "configurePreset": "clang-ubsan"
+    },
+    {
+      "name": "vs2022-debug",
+      "displayName": "Test Visual Studio 2022 v143, Debug configuration",
+      "inherits": "test-base",
+      "configurePreset": "vs2022",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2022-release",
+      "displayName": "Test Visual Studio 2022 v143, Release configuration",
+      "inherits": "test-base",
+      "configurePreset": "vs2022",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2022-asan",
+      "displayName": "Test Visual Studio 2022 v143 AddressSanitizer, Debug configuration",
+      "inherits": "test-base",
+      "configurePreset": "vs2022-asan",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2026-debug",
+      "displayName": "Test Visual Studio 2026 v145, Debug configuration",
+      "inherits": "test-base",
+      "configurePreset": "vs2026",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs2026-release",
+      "displayName": "Test Visual Studio 2026 v145, Release configuration",
+      "inherits": "test-base",
+      "configurePreset": "vs2026",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2026-asan",
+      "displayName": "Test Visual Studio 2026 v145 AddressSanitizer, Debug configuration",
+      "inherits": "test-base",
+      "configurePreset": "vs2026-asan",
+      "configuration": "Debug"
+    }
+  ],
+  "packagePresets": [
+    {
+      "name": "vs2022-package",
+      "displayName": "Package Visual Studio 2022 Release as an unsigned ZIP with SHA-256",
+      "configurePreset": "vs2022",
+      "configurations": ["Release"]
+    },
+    {
+      "name": "vs2026-package",
+      "displayName": "Package Visual Studio 2026 Release as an unsigned ZIP with SHA-256",
+      "configurePreset": "vs2026",
+      "configurations": ["Release"]
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "vs2022-package",
+      "displayName": "Configure, build, test, and package Visual Studio 2022 Release",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "vs2022"
+        },
+        {
+          "type": "build",
+          "name": "vs2022-release"
+        },
+        {
+          "type": "test",
+          "name": "vs2022-release"
+        },
+        {
+          "type": "package",
+          "name": "vs2022-package"
+        }
+      ]
+    },
+    {
+      "name": "vs2026-package",
+      "displayName": "Configure, build, test, and package Visual Studio 2026 Release",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "vs2026"
+        },
+        {
+          "type": "build",
+          "name": "vs2026-release"
+        },
+        {
+          "type": "test",
+          "name": "vs2026-release"
+        },
+        {
+          "type": "package",
+          "name": "vs2026-package"
+        }
+      ]
+    },
+    {
+      "name": "clang-debug",
+      "displayName": "Configure, build, and test Clang Debug: Ninja, clang++ from PATH, lld-link, static debug CRT",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "clang-debug"
+        },
+        {
+          "type": "build",
+          "name": "clang-debug"
+        },
+        {
+          "type": "test",
+          "name": "clang-debug"
+        }
+      ]
+    },
+    {
+      "name": "clang-release",
+      "displayName": "Configure, build, and test Clang Release: Ninja, clang++ from PATH, lld-link, static CRT",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "clang-release"
+        },
+        {
+          "type": "build",
+          "name": "clang-release"
+        },
+        {
+          "type": "test",
+          "name": "clang-release"
+        }
+      ]
+    },
+    {
+      "name": "clang-tidy",
+      "displayName": "Configure, build, and test Clang Debug with clang-tidy on owned targets",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "clang-tidy"
+        },
+        {
+          "type": "build",
+          "name": "clang-tidy"
+        },
+        {
+          "type": "test",
+          "name": "clang-tidy"
+        }
+      ]
+    },
+    {
+      "name": "clang-asan",
+      "displayName": "Configure, build, and test Clang Debug AddressSanitizer (runtime probe must pass)",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "clang-asan"
+        },
+        {
+          "type": "build",
+          "name": "clang-asan"
+        },
+        {
+          "type": "test",
+          "name": "clang-asan"
+        }
+      ]
+    },
+    {
+      "name": "clang-ubsan",
+      "displayName": "Configure, build, and test Clang Release UndefinedBehaviorSanitizer (Debug cannot link the runtime)",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "clang-ubsan"
+        },
+        {
+          "type": "build",
+          "name": "clang-ubsan"
+        },
+        {
+          "type": "test",
+          "name": "clang-ubsan"
+        }
+      ]
+    },
+    {
+      "name": "vs2022-debug",
+      "displayName": "Configure, build, and test Visual Studio 2022 v143, Debug configuration",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "vs2022"
+        },
+        {
+          "type": "build",
+          "name": "vs2022-debug"
+        },
+        {
+          "type": "test",
+          "name": "vs2022-debug"
+        }
+      ]
+    },
+    {
+      "name": "vs2022-release",
+      "displayName": "Configure, build, and test Visual Studio 2022 v143, Release configuration",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "vs2022"
+        },
+        {
+          "type": "build",
+          "name": "vs2022-release"
+        },
+        {
+          "type": "test",
+          "name": "vs2022-release"
+        }
+      ]
+    },
+    {
+      "name": "vs2022-asan",
+      "displayName": "Configure, build, and test Visual Studio 2022 v143 AddressSanitizer, Debug configuration",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "vs2022-asan"
+        },
+        {
+          "type": "build",
+          "name": "vs2022-asan"
+        },
+        {
+          "type": "test",
+          "name": "vs2022-asan"
+        }
+      ]
+    },
+    {
+      "name": "vs2026-debug",
+      "displayName": "Configure, build, and test Visual Studio 2026 v145, Debug configuration",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "vs2026"
+        },
+        {
+          "type": "build",
+          "name": "vs2026-debug"
+        },
+        {
+          "type": "test",
+          "name": "vs2026-debug"
+        }
+      ]
+    },
+    {
+      "name": "vs2026-release",
+      "displayName": "Configure, build, and test Visual Studio 2026 v145, Release configuration",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "vs2026"
+        },
+        {
+          "type": "build",
+          "name": "vs2026-release"
+        },
+        {
+          "type": "test",
+          "name": "vs2026-release"
+        }
+      ]
+    },
+    {
+      "name": "vs2026-asan",
+      "displayName": "Configure, build, and test Visual Studio 2026 v145 AddressSanitizer, Debug configuration",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "vs2026-asan"
+        },
+        {
+          "type": "build",
+          "name": "vs2026-asan"
+        },
+        {
+          "type": "test",
+          "name": "vs2026-asan"
+        }
+      ]
+    },
+    {
+      "name": "clang-coverage",
+      "displayName": "Configure and collect Clang Debug coverage (the build step runs CTest)",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "clang-coverage"
+        },
+        {
+          "type": "build",
+          "name": "clang-coverage"
+        }
+      ]
+    },
+    {
+      "name": "format-check",
+      "displayName": "Configure Clang Debug and run the clang-format check (no tests)",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "clang-debug"
+        },
+        {
+          "type": "build",
+          "name": "format-check"
+        }
+      ]
+    }
+  ]
+}

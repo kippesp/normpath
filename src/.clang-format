@@ -1,0 +1,35 @@
+# clang-format - v23.1.1 (Google delta)
+Language:        Cpp
+BasedOnStyle:  Google
+AccessModifierOffset: -2
+AlignConsecutiveBitFields:
+  Enabled:         true
+  AcrossEmptyLines: true
+  AcrossComments:  true
+  PadOperators:    true
+AlignConsecutiveMacros:
+  Enabled:         true
+  AcrossEmptyLines: true
+  PadOperators:    true
+AllowShortFunctionsOnASingleLine:
+  Other: false
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+BraceWrapping:
+  AfterCaseLabel:  true
+  AfterControlStatement: Always
+  AfterFunction:   true
+  BeforeCatch:     true
+  BeforeElse:      true
+BreakBeforeBraces: Custom
+IncludeBlocks:   Preserve
+IncludeCategories:
+  - Regex: '.*'
+    Priority: 1
+IndentCaseBlocks: true
+IndentPPDirectives: BeforeHash
+InsertNewlineAtEOF: true
+SortIncludes:
+  Enabled: true
+SpaceBeforeCpp11BracedList: true
+Standard:        Latest

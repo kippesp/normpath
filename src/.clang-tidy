@@ -1,0 +1,46 @@
+Checks: >
+  -*,
+  clang-analyzer-*,
+  -clang-analyzer-cplusplus.NewDeleteLeaks,
+  bugprone-*,
+  cert-*,
+  performance-*,
+  portability-*,
+  misc-*,
+  modernize-*,
+  readability-*,
+  cppcoreguidelines-*,
+  -modernize-use-trailing-return-type,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-avoid-c-arrays,
+  -modernize-avoid-c-arrays,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay
+WarningsAsErrors: '*'
+HeaderFilterRegex: '^(common|include|src|tests)/'
+FormatStyle: file
+CheckOptions:
+  # Permit a single-line body after the condition, matching the short-guard style.
+  readability-braces-around-statements.ShortStatementLines: '2'
+  # Windows SDK and UCRT symbols are declared in internal headers behind
+  # the documented umbrella headers; preserve the reference's bounded exception.
+  misc-include-cleaner.IgnoreHeaders: '.*Windows Kits.*'
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.EnumConstantPrefix: k
+  readability-identifier-naming.FunctionCase: camelBack
+  readability-identifier-naming.MethodCase: camelBack
+  readability-identifier-naming.VariableCase: lower_case
+  readability-identifier-naming.GlobalConstantCase: CamelCase
+  readability-identifier-naming.GlobalConstantPrefix: k
+  readability-identifier-naming.LocalConstantCase: lower_case
+  readability-identifier-naming.LocalConstantPrefix: k_
+  readability-identifier-naming.ParameterCase: lower_case
+  readability-identifier-naming.ParameterPrefix: a_
+  readability-identifier-naming.PrivateMemberCase: lower_case
+  readability-identifier-naming.PrivateMemberSuffix: _

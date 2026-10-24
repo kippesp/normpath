@@ -11,7 +11,8 @@ throughout.
 - Visual Studio 2022 with the v143 C++ toolset, or Visual Studio 2026 with the
   v145 C++ toolset, and a Windows SDK.
 - CMake 4.2.5 or newer, Git, and Python 3 available on `PATH`.
-- Network access on the first configure so CMake can fetch Catch2.
+- Network access to fetch Catch2 unless a local repository or prepared source
+  is available.
 - An x64 developer shell with the Windows SDK's `mt.exe` on `PATH`, for the
   manifest tests.
 - A Git checkout, so `--version` includes the commit.

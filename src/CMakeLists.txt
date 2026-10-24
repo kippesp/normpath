@@ -65,13 +65,20 @@ option(BUILD_TESTING "Build and register tests" ON)
 if(BUILD_TESTING)
   enable_testing()
   include(FetchContent)
+  include(DependencySource)
+  set(_catch2_commit 08092139210881f01a34e60c5f2fd6afa0ea4024)
+  np_select_dependency_source(
+    NAME Catch2 VERSION 3.16.1 COMMIT "${_catch2_commit}"
+    UPSTREAM https://github.com/catchorg/Catch2.git
+    CACHE_REPOSITORY catch2.git OUTPUT _catch2_repository)
   set(CMAKE_FOLDER support/generated)
   FetchContent_Declare(Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG 08092139210881f01a34e60c5f2fd6afa0ea4024
+    GIT_REPOSITORY "${_catch2_repository}"
+    GIT_TAG "${_catch2_commit}"
     GIT_SHALLOW FALSE
     SYSTEM EXCLUDE_FROM_ALL)
   FetchContent_MakeAvailable(Catch2)
+  np_report_dependency_source(Catch2 "${catch2_SOURCE_DIR}")
   foreach(dependency IN ITEMS Catch2 Catch2WithMain)
     set_property(TARGET "${dependency}" PROPERTY FOLDER support/dependencies)
     np_apply_sanitizers("${dependency}")

@@ -18,6 +18,10 @@ expand a leading `~`.  It checks some lexical rules but never consults the
 filesystem or the current directory.  The output is not verified: it may still
 be invalid or refer to a location that does not exist.
 
+<img src="https://static.kippesp.dev/np-v1.0.0.gif" width="800" height="432"
+alt="np in cmd.exe converting WSL, Git Bash, SMB, and relative paths to Windows
+form, quoting a path with spaces, and rejecting a drive-relative path">
+
 ## Getting Started
 
 `np.exe` runs on Windows 10 version 1903 or later, x64.  The examples below

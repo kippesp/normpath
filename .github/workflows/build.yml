@@ -1,4 +1,4 @@
-name: Build Windows ZIP
+name: Windows Build, Test, and Package
 
 on:
   workflow_dispatch:

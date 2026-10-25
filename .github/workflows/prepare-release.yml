@@ -1,0 +1,98 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful main build run ID (the number in its URL)
+        required: true
+        type: string
+      tag:
+        description: Existing release tag pointing to that build (for example v1.0.1)
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      BUILD_RUN_ID: ${{ inputs.run_id }}
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - name: Validate build and tag, retrieve package, and verify checksum
+        shell: python
+        run: |
+          import base64
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import re
+          import subprocess
+
+          repo = os.environ["GH_REPO"]
+          run_id = os.environ["BUILD_RUN_ID"]
+          tag = os.environ["RELEASE_TAG"]
+          if not re.fullmatch(r"[0-9]+", run_id):
+              raise SystemExit("Enter the numeric build run ID from its URL")
+          if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", tag):
+              raise SystemExit("Expected a release tag such as v1.0.1")
+
+          def api(path):
+              return json.loads(subprocess.check_output(
+                  ["gh", "api", f"repos/{repo}/{path}"], text=True))
+
+          build = api(f"actions/runs/{run_id}")
+          if (build["status"] != "completed" or build["conclusion"] != "success"
+                  or build["path"] != ".github/workflows/build.yml"
+                  or build["head_branch"] != "main"
+                  or build["event"] not in ("push", "workflow_dispatch")
+                  or build["head_repository"]["full_name"] != repo):
+              raise SystemExit("Select a successful main run of the build workflow")
+          commit = build["head_sha"]
+          if api(f"commits/{tag}")["sha"] != commit:
+              raise SystemExit("The release tag does not point to the selected build commit")
+          source = api(f"contents/src/CMakeLists.txt?ref={commit}")
+          cmake = base64.b64decode(source["content"]).decode()
+          version = re.search(r"project\(np\s+VERSION\s+(\d+\.\d+\.\d+)\b", cmake)
+          if not version or tag != f"v{version[1]}":
+              raise SystemExit("The release tag does not match the built project version")
+
+          subprocess.run([
+              "gh", "run", "download", run_id, "--repo", repo,
+              "--name", "np-windows-x64", "--dir", "packages",
+          ], check=True)
+          package = Path("packages") / f"np-{tag}-windows-x64.zip"
+          checksum = package.with_suffix(".zip.sha256")
+          if set(Path("packages").iterdir()) != {package, checksum}:
+              raise SystemExit("Expected exactly the versioned ZIP and its checksum")
+          expected = checksum.read_text().strip().split()
+          if (len(expected) != 2 or expected[1].lstrip("*") != package.name
+                  or hashlib.sha256(package.read_bytes()).hexdigest() != expected[0].lower()):
+              raise SystemExit("Package checksum verification failed")
+          print(f"Verified {package.name} from commit {commit}")
+
+      - name: Create draft release for browser review
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" \
+            "packages/np-$RELEASE_TAG-windows-x64.zip" \
+            "packages/np-$RELEASE_TAG-windows-x64.zip.sha256" \
+            --repo "$GH_REPO" --verify-tag --draft \
+            --title "np ${RELEASE_TAG#v}" --generate-notes
+          release_url=$(gh release view "$RELEASE_TAG" --repo "$GH_REPO" --json url --jq .url)
+          echo "Draft created: $release_url"
+          echo "Review the [draft release]($release_url), edit its notes, then click **Publish release**." >> "$GITHUB_STEP_SUMMARY"

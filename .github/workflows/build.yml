@@ -22,11 +22,6 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v7
 
-      - name: Install CMake
-        run: |
-          python -m pip install --disable-pip-version-check "cmake==4.2.5"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
       - name: Build, test, and package
         working-directory: src
         run: |
@@ -36,14 +31,20 @@ jobs:
           import ctypes
           import os
           from pathlib import Path
+          import shutil
           import subprocess
           import sys
-
-          import cmake
 
           # Children inherit this mode, including failures before main().
           kernel32 = ctypes.WinDLL("kernel32")
           kernel32.SetErrorMode(kernel32.GetErrorMode() | 0x0001 | 0x0002)
+
+          # Resolve the runner's CMake before VsDevCmd changes PATH.
+          cmake_exe = shutil.which("cmake.exe")
+          if not cmake_exe:
+              sys.exit("CMake was not found on the runner PATH")
+          print(f"Using CMake: {cmake_exe}", flush=True)
+          subprocess.run([cmake_exe, "--version"], check=True)
 
           vswhere = Path(os.environ["ProgramFiles(x86)"]) / "Microsoft Visual Studio/Installer/vswhere.exe"
           installation = subprocess.check_output([
@@ -55,7 +56,6 @@ jobs:
               sys.exit("Visual Studio 2026 C++ tools were not found")
 
           developer_script = Path(installation) / "Common7/Tools/VsDevCmd.bat"
-          cmake_exe = Path(cmake.CMAKE_BIN_DIR) / "cmake.exe"
           batch = Path(os.environ["RUNNER_TEMP"]) / "build-and-test.cmd"
           batch.write_text(
               '@echo off\n'

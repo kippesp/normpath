@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 4.2.5)
 
 # Set before project() and dependencies so all targets share the CRT.
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-project(np VERSION 1.0.1 LANGUAGES CXX)
+project(np VERSION 1.0.2 LANGUAGES CXX)
 include(cmake/ToolchainReport.cmake)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER support/generated)

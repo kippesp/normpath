@@ -300,7 +300,10 @@ TEST_CASE("SMB URLs use ordinary UNC normalization without URL decoding")
       {.input = "smb://server/share/../other", .expected = std::nullopt},
       {.input = "smb://server/share/..", .expected = std::nullopt},
       {.input = "smb://server/share/con.txt", .expected = std::nullopt},
-      {.input = "smb://server/share/name.", .expected = std::nullopt},
+      {
+          .input = "smb://server/share/name.",
+          .expected = R"(\\server\share\name)",
+      },
       {.input = "smb:", .expected = std::nullopt},
       {.input = "smb:/server/share", .expected = std::nullopt},
       {.input = R"(smb:\\server\share)", .expected = std::nullopt},
@@ -372,6 +375,52 @@ TEST_CASE("Whole path normalization preserves root trailing separators")
   checkPathConversion({.input = k_long_name, .expected = k_long_name});
 }
 
+TEST_CASE("A single sentence period is removed only from the final filename")
+{
+  constexpr auto k_fixtures = std::to_array<Fixture>({
+      {.input = R"(d:\dir1\dir2\dir3.)", .expected = R"(D:\dir1\dir2\dir3)"},
+      {.input = "d:/dir1/dir2/dir3.", .expected = R"(D:\dir1\dir2\dir3)"},
+      {.input = "src/main.cpp.", .expected = R"(src\main.cpp)"},
+      {.input = ".hidden.", .expected = ".hidden"},
+      {.input = "name.", .expected = "name"},
+      {.input = "a.", .expected = "a"},
+      {.input = "/mnt/d/dir.", .expected = R"(D:\dir)"},
+      {.input = "/d/dir.", .expected = R"(D:\dir)"},
+      {.input = "/D:/dir.", .expected = R"(D:\dir)"},
+      {.input = "///logs/dir.", .expected = R"(\logs\dir)"},
+      {.input = R"(\\server\share\dir.)", .expected = R"(\\server\share\dir)"},
+      {.input = "C:/my projects/app.", .expected = R"("C:\my projects\app")"},
+      {.input = "C:/漢字/проект.", .expected = "C:\\漢字\\проект"},
+      {.input = ".", .expected = "."},
+      {.input = "..", .expected = ".."},
+      {.input = "dir/.", .expected = "dir"},
+      {.input = "dir/..", .expected = "."},
+      {.input = "C:/.", .expected = R"(C:\)"},
+      {.input = "name..", .expected = std::nullopt},
+      {.input = "...", .expected = std::nullopt},
+      {.input = "bad./file.", .expected = std::nullopt},
+      {.input = "bad./", .expected = std::nullopt},
+      {.input = "bad./.", .expected = std::nullopt},
+      {.input = "name .", .expected = std::nullopt},
+      {.input = "CON.", .expected = std::nullopt},
+      {.input = "bad?.", .expected = std::nullopt},
+      {.input = "C:dir.", .expected = std::nullopt},
+      {.input = "./c:/dir.", .expected = std::nullopt},
+      {.input = R"(\\server\share.)", .expected = R"(\\server\share.)"},
+  });
+  for (const auto& fixture : k_fixtures)
+  {
+    DYNAMIC_SECTION(fixture.input)
+    {
+      checkPathConversion(fixture);
+    }
+  }
+  checkPathConversion({.input = "~/dir.", .expected = R"(C:\Users\me\dir)"},
+                      R"(C:\Users\me)");
+  checkPathConversion({.input = "~", .expected = std::nullopt},
+                      R"(C:\Users\me.)");
+}
+
 TEST_CASE("Surviving filenames follow bounded Windows naming rules")
 {
   constexpr auto k_fixtures = std::to_array<Fixture>({
@@ -387,7 +436,7 @@ TEST_CASE("Surviving filenames follow bounded Windows naming rules")
       {.input = "a/b<c", .expected = std::nullopt},
       {.input = "a/b?c", .expected = std::nullopt},
       {.input = "a/tab\tb", .expected = std::nullopt},
-      {.input = "C:/dir/name.", .expected = std::nullopt},
+      {.input = "C:/dir/name.", .expected = R"(C:\dir\name)"},
       {.input = "C:/dir/name ", .expected = std::nullopt},
       {.input = ".hidden", .expected = ".hidden"},
       {.input = "../name", .expected = R"(..\name)"},

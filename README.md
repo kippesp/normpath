@@ -56,6 +56,11 @@ Both `/` and `\` are accepted as separators.  `np` also recognizes Unix-style
 drive spellings and removes redundant separators and `.` or `..` segments.
 Relative paths stay relative; `np` never prepends the current directory.
 
+A single period attached to the final filename is treated as sentence
+punctuation and removed: `d:\dir1\dir2\dir3.` becomes `D:\dir1\dir2\dir3`.
+This applies to arguments and stdin. `.` and `..` path segments keep their
+normal meaning; periods inside names and UNC server/share fields are preserved.
+
 | Input                    | Output               |
 | ------------------------ | -------------------- |
 | `/c/work`, `/mnt/c/work` | `C:\work`            |
@@ -125,7 +130,7 @@ Filename components surviving normalization are rejected for:
 - Reserved device names, with or without an extension: `CON`, `PRN`, `AUX`,
   `NUL`, `COM1`–`COM9`, or `LPT1`–`LPT9` (case-insensitive, including the
   superscript digits `¹`, `²`, and `³` for COM and LPT)
-- A trailing space or period
+- A trailing space or period remaining after the sentence-period removal
 
 The drive designator and UNC server and share are root fields, not filename
 components; UNC server and share fields are checked for control characters.

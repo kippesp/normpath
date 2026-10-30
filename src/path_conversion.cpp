@@ -260,9 +260,17 @@ std::expected<std::string, PathRejection> convertToCmdPath(
   if (!k_before)
     return std::unexpected(k_before.error());
 
-  // Collapse extra leading separators in drive-unspecified rooted input.
   std::string windows_text = interpreted;
   std::ranges::replace(windows_text, '/', '\\');
+  // A single period attached to the input's final filename is sentence
+  // punctuation. Preserve root fields, dot segments, and home-value text.
+  if (a_text.ends_with('.') && windows_text.size() > k_before->filenames + 1 &&
+      windows_text.ends_with('.') && !windows_text.ends_with("..") &&
+      !windows_text.ends_with("\\."))
+  {
+    windows_text.pop_back();
+  }
+  // Collapse extra leading separators in drive-unspecified rooted input.
   if (k_before->kind == RootKind::kRooted)
     windows_text.erase(0, k_before->filenames - 1);
 

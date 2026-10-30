@@ -172,6 +172,16 @@ class CliTests(unittest.TestCase):
         self.assert_process(["-"], b"", b"", 0)
         self.assert_process(["-", "-"], b"", b"", 0)
 
+    def test_sentence_period_in_operands_and_stdin(self):
+        paths = [r"d:\dir1\dir2\dir3.", "src/main.cpp.", "~/dir.",
+                 "C:/my projects/app.", "smb://server/share/dir.", ".", ".."]
+        expected = [r"D:\dir1\dir2\dir3", r"src\main.cpp", r"C:\Users\me\dir",
+                    '"C:\\my projects\\app"', r"\\server\share\dir", ".", ".."]
+        output = ("\n".join(expected) + "\n").encode()
+        self.assert_process(paths, output, home=r"C:\Users\me")
+        self.assert_process(["-"], output, home=r"C:\Users\me",
+                            data=("\n".join(paths) + "\n").encode())
+
     def test_record_fixtures(self):
         paths = ["/c:", "/C:/a/../../x", "/C:foo/a/../../x", "//C:/x"]
         output = b"C:\\\nC:\\x\n\\\\C:\\x\n"

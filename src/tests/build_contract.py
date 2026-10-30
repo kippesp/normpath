@@ -88,7 +88,7 @@ def identity(args):
             run(*command)
             version = run(str(executable), "--version")
             build_revision = revision[:7] + (b"-dev" if dev else b"")
-            expected = (b"np - Path Normalizer for Windows (ver. 1.0.1 - "
+            expected = (b"np - Path Normalizer for Windows (ver. 1.0.2 - "
                         + build_revision + b")\nhttps://github.com/kippesp/normpath\n")
             require(version == expected,
                     f"Incorrect version output: {version!r}")

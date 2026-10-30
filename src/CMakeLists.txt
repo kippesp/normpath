@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 4.2.5)
 
 # Set before project() and dependencies so all targets share the CRT.
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-project(np VERSION 1.0.2 LANGUAGES CXX)
+project(np VERSION 1.1.0 LANGUAGES CXX)
 include(cmake/ToolchainReport.cmake)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER support/generated)
@@ -55,7 +55,7 @@ endfunction()
 enable_language(RC)
 
 add_executable(np_exe main.cpp path_conversion.h path_conversion.cpp
-  standard_streams.h standard_streams.cpp)
+  shell_detection.h shell_detection.cpp standard_streams.h standard_streams.cpp)
 set_target_properties(np_exe PROPERTIES OUTPUT_NAME np)
 np_apply_checks(np_exe)
 np_add_project_identity(np_exe)
@@ -113,6 +113,20 @@ if(BUILD_TESTING)
   np_apply_checks(np_stream_console_driver)
   np_embed_manifest(np_stream_console_driver)
 
+  add_executable(np_shell_tests tests/shell_detection_tests.cpp
+    shell_detection.h shell_detection.cpp)
+  target_include_directories(np_shell_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(np_shell_tests PRIVATE Catch2::Catch2WithMain)
+  np_apply_checks(np_shell_tests)
+  np_embed_manifest(np_shell_tests)
+  add_test(NAME shell_detection COMMAND np_shell_tests)
+
+  add_executable(np_shell_detection_driver tests/shell_detection_driver.cpp
+    shell_detection.h shell_detection.cpp)
+  target_include_directories(np_shell_detection_driver PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+  np_apply_checks(np_shell_detection_driver)
+  np_embed_manifest(np_shell_detection_driver)
+
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   add_test(NAME cli COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_tests.py"
@@ -120,6 +134,11 @@ if(BUILD_TESTING)
     --version-string "${PROJECT_VERSION}"
     --address-sanitizer "$<IF:${NP_ASAN_CONDITION},on,off>")
   set_tests_properties(cli PROPERTIES TIMEOUT 60)
+  add_test(NAME cli_shells COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/shell_integration.py"
+    --product "$<TARGET_FILE:np_exe>"
+    --driver "$<TARGET_FILE:np_shell_detection_driver>")
+  set_tests_properties(cli_shells PROPERTIES TIMEOUT 120)
   add_test(NAME standard_streams_console COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/console_integration.py"
     --driver "$<TARGET_FILE:np_stream_console_driver>")
@@ -141,7 +160,9 @@ if(BUILD_TESTING)
     --mt "${NP_MT_EXECUTABLE}" --product "$<TARGET_FILE:np_exe>"
     --test "$<TARGET_FILE:np_build_tests>" --test "$<TARGET_FILE:np_path_tests>"
     --test "$<TARGET_FILE:np_stream_tests>"
-    --test "$<TARGET_FILE:np_stream_console_driver>")
+    --test "$<TARGET_FILE:np_stream_console_driver>"
+    --test "$<TARGET_FILE:np_shell_tests>"
+    --test "$<TARGET_FILE:np_shell_detection_driver>")
   add_test(NAME git_identity_refresh COMMAND "${Python3_EXECUTABLE}"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/build_contract.py" identity
     --source "${CMAKE_CURRENT_SOURCE_DIR}" --cmake "${CMAKE_COMMAND}"
@@ -160,11 +181,14 @@ if(BUILD_TESTING)
         --object "$<TARGET_FILE:np_path_tests>"
         --object "$<TARGET_FILE:np_stream_tests>"
         --object "$<TARGET_FILE:np_stream_console_driver>"
+        --object "$<TARGET_FILE:np_shell_tests>"
+        --object "$<TARGET_FILE:np_shell_detection_driver>"
         --source "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
         --source "${CMAKE_CURRENT_SOURCE_DIR}/path_conversion.cpp"
+        --source "${CMAKE_CURRENT_SOURCE_DIR}/shell_detection.cpp"
         --source "${CMAKE_CURRENT_SOURCE_DIR}/standard_streams.cpp"
       DEPENDS np_exe np_build_tests np_path_tests np_stream_tests
-        np_stream_console_driver VERBATIM)
+        np_stream_console_driver np_shell_tests np_shell_detection_driver VERBATIM)
     set_property(TARGET coverage PROPERTY FOLDER support/tools)
   endif()
   unset(CMAKE_FOLDER)

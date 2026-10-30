@@ -224,6 +224,81 @@ std::optional<PathRejection> validateFilenameComponents(std::string_view a_text,
   return std::nullopt;
 }
 
+struct CodePoint {
+  char32_t value;
+  std::size_t length;
+};
+
+// Results are well-formed UTF-8; a stray byte decodes as U+FFFD, which no
+// PowerShell rule below treats specially.
+CodePoint decodeUtf8At(std::string_view a_text, std::size_t a_index)
+{
+  const auto k_lead = static_cast<unsigned char>(a_text.at(a_index));
+  if (k_lead < 0x80U)
+    return {.value = k_lead, .length = 1};
+  std::size_t length = 2;
+  if (k_lead >= 0xE0U)
+    length = k_lead < 0xF0U ? 3 : 4;
+  if (k_lead < 0xC0U || a_index + length > a_text.size())
+    return {.value = 0xFFFDU, .length = 1};
+  char32_t value = k_lead & (0x7FU >> length);
+  for (std::size_t offset = 1; offset < length; ++offset)
+  {
+    value = (value << 6U) |
+            (static_cast<unsigned char>(a_text.at(a_index + offset)) & 0x3FU);
+  }
+  return {.value = value, .length = length};
+}
+
+// U+2018 to U+201B are the curly single quotation marks.
+bool isPowerShellSingleQuote(char32_t a_char)
+{
+  return a_char == U'\'' || (a_char >= 0x2018U && a_char <= 0x201BU);
+}
+
+// PowerShell's tokenizer reads these anywhere in an unquoted argument as
+// whitespace (NEL and the Unicode space separators) or as curly quotation
+// marks (U+2018 to U+201E).
+bool isPowerShellUnicodeDelimiter(char32_t a_char)
+{
+  return a_char == 0x85U || a_char == 0xA0U || a_char == 0x1680U ||
+         (a_char >= 0x2000U && a_char <= 0x200AU) ||
+         (a_char >= 0x2018U && a_char <= 0x201EU) || a_char == 0x2028U ||
+         a_char == 0x2029U || a_char == 0x202FU || a_char == 0x205FU ||
+         a_char == 0x3000U;
+}
+
+// An unquoted argument starting with any of these is read as a parameter,
+// comment, splat, or separate token rather than as path text. U+2013 to
+// U+2015 are the dashes PowerShell accepts in place of '-'.
+bool startsPowerShellToken(char32_t a_char)
+{
+  return a_char == U'-' || a_char == U'#' || a_char == U'@' || a_char == U']' ||
+         (a_char >= 0x2013U && a_char <= 0x2015U);
+}
+
+// Single quotes keep every character literal except a single-quote
+// character, which PowerShell reads doubled as one literal character.
+std::string quoteForPowerShell(std::string_view a_text)
+{
+  bool quote = a_text.find_first_of(" \"$&'(),;`{}|") != std::string::npos;
+  std::string quoted = "'";
+  for (std::size_t index = 0; index < a_text.size();)
+  {
+    const auto k_char = decodeUtf8At(a_text, index);
+    const auto k_spelling = a_text.substr(index, k_char.length);
+    quote = quote || isPowerShellUnicodeDelimiter(k_char.value) ||
+            (index == 0 && startsPowerShellToken(k_char.value));
+    if (isPowerShellSingleQuote(k_char.value))
+      quoted += k_spelling;
+    quoted += k_spelling;
+    index += k_char.length;
+  }
+  if (!quote)
+    return std::string(a_text);
+  return quoted + '\'';
+}
+
 }  // namespace
 
 bool startsWithHomeToken(std::string_view a_text)
@@ -232,8 +307,9 @@ bool startsWithHomeToken(std::string_view a_text)
                            isPathSeparator(a_text.at(1)));
 }
 
-std::expected<std::string, PathRejection> convertToCmdPath(
-    std::string_view a_text, std::optional<std::string_view> a_home)
+std::expected<std::string, PathRejection> convertPath(
+    std::string_view a_text, PathStyle a_style,
+    std::optional<std::string_view> a_home)
 {
   std::string interpreted;
   if (startsWithHomeToken(a_text))
@@ -300,6 +376,11 @@ std::expected<std::string, PathRejection> convertToCmdPath(
     return std::unexpected(*k_rejection);
   }
 
+  if (a_style == PathStyle::kPowerShell)
+  {
+    std::ranges::replace(normalized, '\\', '/');
+    return quoteForPowerShell(normalized);
+  }
   if (normalized.find_first_of(" &()^") != std::string::npos)
     normalized = '"' + normalized + '"';
   return normalized;

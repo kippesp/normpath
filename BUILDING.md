@@ -11,6 +11,8 @@ throughout.
 - Visual Studio 2022 with the v143 C++ toolset, or Visual Studio 2026 with the
   v145 C++ toolset, and a Windows SDK.
 - CMake 4.2.5 or newer, Git, and Python 3 available on `PATH`.
+- PowerShell 7 (`pwsh`) and Windows PowerShell 5.1 (`powershell`) on `PATH`,
+  for the `cli_shells` test that runs np through each shell and cmd.exe.
 - Network access to fetch Catch2 unless a local repository or prepared source
   is available.
 - An x64 developer shell with the Windows SDK's `mt.exe` on `PATH`, for the

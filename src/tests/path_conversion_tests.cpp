@@ -17,9 +17,10 @@ struct Fixture {
 };
 
 void checkPathConversion(const Fixture& a_fixture,
-                         std::optional<std::string_view> a_home = std::nullopt)
+                         std::optional<std::string_view> a_home = std::nullopt,
+                         np::PathStyle a_style = np::PathStyle::kCmd)
 {
-  const auto k_result = np::convertToCmdPath(a_fixture.input, a_home);
+  const auto k_result = np::convertPath(a_fixture.input, a_style, a_home);
   if (a_fixture.expected)
   {
     REQUIRE(k_result.has_value());
@@ -523,6 +524,144 @@ TEST_CASE("Final quoting uses only the specified trigger characters")
     DYNAMIC_SECTION(fixture.input)
     {
       checkPathConversion(fixture);
+    }
+  }
+}
+
+TEST_CASE("PowerShell results use forward slashes for every root kind")
+{
+  constexpr auto k_fixtures = std::to_array<Fixture>({
+      {.input = "a/b/c", .expected = "a/b/c"},
+      {.input = R"(src\main.cpp)", .expected = "src/main.cpp"},
+      {.input = "../src", .expected = "../src"},
+      {.input = "a/..", .expected = "."},
+      {.input = ".", .expected = "."},
+      {.input = "/users/me", .expected = "/users/me"},
+      {.input = "/", .expected = "/"},
+      {.input = "C:/", .expected = "C:/"},
+      {.input = "c:/Foo/BAR/", .expected = "C:/Foo/BAR"},
+      {.input = "/c", .expected = "C:/"},
+      {.input = "/mnt/d/foo", .expected = "D:/foo"},
+      {.input = "/C:/home/me", .expected = "C:/home/me"},
+      {.input = R"(c:\users\kippesp\dir1\..)", .expected = "C:/users/kippesp"},
+      {.input = R"(d:\dir1\dir2\dir3.)", .expected = "D:/dir1/dir2/dir3"},
+      {.input = R"(\\server\share\dir)", .expected = "//server/share/dir"},
+      {.input = R"(\\server\share\)", .expected = "//server/share/"},
+      {.input = "//server/share", .expected = "//server/share"},
+      {.input = R"(\\server\share\dir\..)", .expected = "//server/share/"},
+      {.input = "smb://server/share/docs", .expected = "//server/share/docs"},
+      {.input = "C:/Users/漢字/проект", .expected = "C:/Users/漢字/проект"},
+      {.input = "C:/café/😀", .expected = "C:/café/😀"},
+      {.input = "C:foo", .expected = std::nullopt},
+      {.input = R"(\\server\share\..\other)", .expected = std::nullopt},
+      {.input = "C:/dir/con.txt", .expected = std::nullopt},
+      {.input = "name..", .expected = std::nullopt},
+  });
+  for (const auto& fixture : k_fixtures)
+  {
+    DYNAMIC_SECTION(fixture.input)
+    {
+      checkPathConversion(fixture, std::nullopt, np::PathStyle::kPowerShell);
+    }
+  }
+  checkPathConversion({.input = "~/x", .expected = "C:/Users/me/x"},
+                      R"(C:\Users\me)", np::PathStyle::kPowerShell);
+  checkPathConversion({.input = "~", .expected = "'C:/Users/Jo Doe'"},
+                      R"(C:\Users\Jo Doe)", np::PathStyle::kPowerShell);
+  checkPathConversion({.input = "~/dir.", .expected = "C:/Users/Зоя/dir"},
+                      R"(C:\Users\Зоя)", np::PathStyle::kPowerShell);
+}
+
+TEST_CASE("PowerShell quoting keeps the path text literal")
+{
+  constexpr auto k_fixtures = std::to_array<Fixture>({
+      {.input = "C:/my projects/app", .expected = "'C:/my projects/app'"},
+      {.input = "C:/my projects/app.", .expected = "'C:/my projects/app'"},
+      {.input = " leading/x", .expected = "' leading/x'"},
+      {
+          .input = R"(\\server\my share\x)",
+          .expected = "'//server/my share/x'",
+      },
+      {
+          .input = "C:/Users/Paul's files",
+          .expected = "'C:/Users/Paul''s files'",
+      },
+      {.input = "a'b'c", .expected = "'a''b''c'"},
+      {.input = "C:/it’s", .expected = "'C:/it’’s'"},
+      {.input = "‘a‚b‛c", .expected = "'‘‘a‚‚b‛‛c'"},
+      {.input = "C:/q“x”„", .expected = "'C:/q“x”„'"},
+      {.input = "//localhost/c$/Users", .expected = "'//localhost/c$/Users'"},
+      {.input = "$HOME/x", .expected = "'$HOME/x'"},
+      {
+          .input = "C:/Program Files (x86)",
+          .expected = "'C:/Program Files (x86)'",
+      },
+      {.input = "C:/a{b}", .expected = "'C:/a{b}'"},
+      {.input = "a`b", .expected = "'a`b'"},
+      {.input = R"(\\se"rv\share)", .expected = R"('//se"rv/share')"},
+      {.input = R"(\\se|rv\share)", .expected = "'//se|rv/share'"},
+      {.input = "./-dash", .expected = "'-dash'"},
+      {.input = "#notes/x", .expected = "'#notes/x'"},
+      {.input = "@types/node", .expected = "'@types/node'"},
+      {.input = "./]x", .expected = "']x'"},
+      {.input = "–x", .expected = "'–x'"},
+      {.input = "—x", .expected = "'—x'"},
+      {.input = "―x", .expected = "'―x'"},
+      {.input = "a-b/C#/x@y/z]–", .expected = "a-b/C#/x@y/z]–"},
+      {.input = "C:/work/a^b", .expected = "C:/work/a^b"},
+      {.input = "C:/100%/x", .expected = "C:/100%/x"},
+      {.input = "C:/hi!", .expected = "C:/hi!"},
+      {.input = "a[1]/b=c+d~e", .expected = "a[1]/b=c+d~e"},
+      {.input = "~user/x", .expected = "~user/x"},
+      {.input = "1.10", .expected = "1.10"},
+      {
+          .input = "C:/zero\u200Bwidth\uFEFF",
+          .expected = "C:/zero\u200Bwidth\uFEFF",
+      },
+  });
+  for (const auto& fixture : k_fixtures)
+  {
+    DYNAMIC_SECTION(fixture.input)
+    {
+      checkPathConversion(fixture, std::nullopt, np::PathStyle::kPowerShell);
+    }
+  }
+  constexpr std::string_view k_triggers = " $&'(),;`{}";
+  for (char ascii = ' '; ascii <= '~'; ++ascii)
+  {
+    // Skip separators and characters rejected in filenames.
+    if (std::string_view(R"(<>:"|?*/\)").contains(ascii))
+      continue;
+    const std::string k_path = std::string("a") + ascii + "b";
+    std::string expected = k_path;
+    if (k_triggers.contains(ascii))
+      expected = ascii == '\'' ? "'a''b'" : "'" + k_path + "'";
+    DYNAMIC_SECTION("ASCII " << ascii)
+    {
+      checkPathConversion({.input = k_path, .expected = expected}, std::nullopt,
+                          np::PathStyle::kPowerShell);
+    }
+  }
+  constexpr auto k_spaces = std::to_array<std::string_view>({
+      "\u0085",
+      "\u00A0",
+      "\u1680",
+      "\u2000",
+      "\u2005",
+      "\u200A",
+      "\u2028",
+      "\u2029",
+      "\u202F",
+      "\u205F",
+      "\u3000",
+  });
+  for (const auto k_space : k_spaces)
+  {
+    const std::string k_path = std::string("C:/a") + std::string(k_space) + "b";
+    DYNAMIC_SECTION("Unicode space " << k_path)
+    {
+      checkPathConversion({.input = k_path, .expected = "'" + k_path + "'"},
+                          std::nullopt, np::PathStyle::kPowerShell);
     }
   }
 }

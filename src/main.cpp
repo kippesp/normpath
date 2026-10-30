@@ -1,4 +1,5 @@
 #include "path_conversion.h"
+#include "shell_detection.h"
 #include "standard_streams.h"
 #include "version.h"
 
@@ -20,7 +21,9 @@ namespace {
 
 constexpr std::string_view kHelp =
     "np - Path Normalizer for Windows\n\n"
-    "Converts path spellings to Windows form.\n\n"
+    "Converts path spellings to Windows form. Run from PowerShell, np uses\n"
+    "forward slashes and PowerShell quoting; otherwise, including cmd.exe,\n"
+    "it uses backslashes and cmd.exe quoting.\n\n"
     "USAGE: np [options] [PATH...]\n\n"
     "ARGUMENTS:\n"
     "  PATH...    Paths to convert; - reads one path per line from stdin\n\n"
@@ -138,12 +141,13 @@ std::optional<std::string> readHome()
 // The path and its formatted location are explicit at each call site.
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 bool convertInput(np::StandardStreams& a_streams, std::string_view a_text,
-                  std::string_view a_location)
+                  std::string_view a_location, np::PathStyle a_style)
 {
   const auto k_home =
       np::startsWithHomeToken(a_text) ? readHome() : std::nullopt;
-  auto result = np::convertToCmdPath(
-      a_text, k_home ? std::optional<std::string_view>(*k_home) : std::nullopt);
+  auto result = np::convertPath(
+      a_text, a_style,
+      k_home ? std::optional<std::string_view>(*k_home) : std::nullopt);
   if (!result)
   {
     writeDiagnostic(a_streams,
@@ -177,6 +181,11 @@ ExitCode run(np::StandardStreams& a_streams, std::span<char*> a_arguments)
     return ExitCode::kSuccess;
   }
 
+  // An unrecognized parent, such as a script host or an exited launcher,
+  // keeps the cmd.exe spelling np produced before shell detection.
+  const auto k_style = np::detectParentShell() == np::Shell::kPowerShell
+                           ? np::PathStyle::kPowerShell
+                           : np::PathStyle::kCmd;
   bool rejected = false;
   std::size_t position = 0;
   for (const auto k_operand : k_invocation->operands)
@@ -185,7 +194,7 @@ ExitCode run(np::StandardStreams& a_streams, std::span<char*> a_arguments)
     if (k_operand != "-")
     {
       if (!convertInput(a_streams, k_operand,
-                        std::format("operand {}", position)))
+                        std::format("operand {}", position), k_style))
         rejected = true;
       continue;
     }
@@ -204,7 +213,7 @@ ExitCode run(np::StandardStreams& a_streams, std::span<char*> a_arguments)
                         std::format("{}: ill-formed UTF-8", k_location));
         rejected = true;
       }
-      else if (!convertInput(a_streams, k_record.text, k_location))
+      else if (!convertInput(a_streams, k_record.text, k_location, k_style))
       {
         rejected = true;
       }

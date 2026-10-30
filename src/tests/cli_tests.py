@@ -18,7 +18,9 @@ VERSION = None
 ADDRESS_SANITIZER = False
 HELP = (
     "np - Path Normalizer for Windows\n\n"
-    "Converts path spellings to Windows form.\n\n"
+    "Converts path spellings to Windows form. Run from PowerShell, np uses\n"
+    "forward slashes and PowerShell quoting; otherwise, including cmd.exe,\n"
+    "it uses backslashes and cmd.exe quoting.\n\n"
     "USAGE: np [options] [PATH...]\n\n"
     "ARGUMENTS:\n"
     "  PATH...    Paths to convert; - reads one path per line from stdin\n\n"

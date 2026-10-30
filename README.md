@@ -1,16 +1,19 @@
 # np — Path Normalizer for Windows
 
 `np` converts path spellings from coding agents or other operating systems to
-Windows form, primarily for use in cmd.exe.  It converts separators, expands a
-leading `~`, and translates drive spellings such as `/mnt/c/users/me` to
-`C:\users\me`.  These conversions can also be useful in PowerShell and other
-Windows applications.  Automatic quoting follows cmd.exe conventions.
+Windows form for use in cmd.exe or PowerShell.  It converts separators, expands
+a leading `~`, and translates drive spellings such as `/mnt/c/users/me` to
+`C:\users\me`.  It detects whether you ran it from cmd.exe or PowerShell and
+spells and quotes the result for that shell.
 
 For example, with `USERPROFILE=C:\Users\me`:
 
 ```text
 > np ~/mystuff/projects/cli_utils/normpath.git
 C:\Users\me\mystuff\projects\cli_utils\normpath.git
+
+PS> np ~/mystuff/projects/cli_utils/normpath.git
+C:/Users/me/mystuff/projects/cli_utils/normpath.git
 ```
 
 `np` converts input text to Windows path text, reading `USERPROFILE` only to
@@ -25,7 +28,8 @@ form, quoting a path with spaces, and rejecting a drive-relative path">
 ## Getting Started
 
 `np.exe` runs on Windows 10 version 1903 or later, x64.  The examples below
-use cmd.exe.
+use cmd.exe unless the prompt is `PS>`; [Shell-Aware Output](#shell-aware-output)
+describes the PowerShell differences.
 
 `np`, `np -h`, and `np --help` show the same usage and options.  `np --version`
 shows version information.  The seven-character Git revision has a `-dev`
@@ -74,8 +78,8 @@ Server and share are required.  Use literal spaces; percent signs and URL
 encoding are rejected.  Credentials, ports, IPv6 literals, backslashes,
 queries, and fragments are unsupported in SMB inputs.
 
-When the converted path contains a space or any of `& ( ) ^`, `np` wraps the
-path in double quotes.  The input needs quotes for the same reason; cmd.exe
+In cmd.exe, when the converted path contains a space or any of `& ( ) ^`, `np`
+wraps the path in double quotes.  The input needs quotes for the same reason; cmd.exe
 consumes those before `np` sees the path.  `%` and `!` do not trigger quotes,
 and quoting does not suppress cmd.exe variable expansion.
 
@@ -86,6 +90,27 @@ and quoting does not suppress cmd.exe variable expansion.
 
 If a path is rejected, `np` reports an error on stderr and continues with any
 remaining paths.
+
+## Shell-Aware Output
+
+In PowerShell 7 and Windows PowerShell 5.1, `np` prints forward slashes.
+It adds single quotes where needed to preserve the path text and doubles
+embedded single quotes:
+
+```text
+PS> np "C:\my projects\app"
+'C:/my projects/app'
+
+PS> np "C:\Users\Paul's files"
+'C:/Users/Paul''s files'
+```
+
+Detection uses the immediate parent process; other or unavailable parents
+default to cmd.exe output.  Thus, `cmd /c np` uses cmd.exe output even when
+invoked from PowerShell.
+
+PowerShell cmdlets that take `-Path` treat `[` and `]` as wildcards; quoting
+does not change that.  For such names, pass the path with `-LiteralPath`.
 
 ## Reading Paths from stdin
 
@@ -110,6 +135,16 @@ You can also pipe paths into `np`:
 ```bat
 type paths.txt | np -
 ```
+
+PowerShell has no `<` redirection; pipe the file instead:
+
+```powershell
+Get-Content -Encoding UTF8 paths.txt | np -
+```
+
+In Windows PowerShell 5.1, first set
+`$OutputEncoding = [Text.UTF8Encoding]::new($false)` to preserve non-ASCII
+characters in piped input.  PowerShell 7 already uses UTF-8.
 
 To enter paths interactively, run `np -`.  Press **Ctrl+Z**, then **Enter**,
 to end input.
